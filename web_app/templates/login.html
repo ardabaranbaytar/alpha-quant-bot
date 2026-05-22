@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpha Quant | Sign In</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+        body {
+            background-color: #f5f1eb;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 20px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+            padding: 44px 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .logo {
+            background: linear-gradient(90deg, #2a8a7a, #6a52a0, #b05050, #2a8a7a);
+            background-size: 300% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 5s linear infinite;
+            font-weight: 900;
+            font-size: 1.35rem;
+            letter-spacing: -0.03em;
+        }
+
+        @keyframes shimmer {
+            0%   { background-position: 0% center; }
+            100% { background-position: 300% center; }
+        }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08), transparent);
+            margin: 24px 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #a89e92;
+            margin-bottom: 6px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            background: #faf8f4;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 10px;
+            padding: 11px 14px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88rem;
+            color: #1c1814;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #2a8a7a;
+            box-shadow: 0 0 0 3px rgba(42,138,122,0.12);
+        }
+
+        .submit-btn {
+            width: 100%;
+            background: #1c1814;
+            color: #f5f1eb;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 13px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+
+        .submit-btn:hover {
+            background: #2a8a7a;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px rgba(42,138,122,0.25);
+        }
+
+        .error-box {
+            background: rgba(176,80,80,0.08);
+            border: 1px solid rgba(176,80,80,0.25);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.8rem;
+            color: #b05050;
+            font-weight: 500;
+        }
+
+        .disclaimer {
+            font-size: 0.7rem;
+            color: #a89e92;
+            text-align: center;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+
+        <div class="text-center mb-6">
+            <div class="logo mb-2">⬡ ALPHA QUANT</div>
+            <p style="font-size:0.8rem; color:#6b6256; margin-top:4px;">Sign in to access the dashboard</p>
+        </div>
+
+        <div class="divider"></div>
+
+        {% if error %}
+        <div class="error-box mb-5">
+            ⚠️ {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="/login" autocomplete="off">
+            <div class="mb-4">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username"
+                       placeholder="admin" autofocus required>
+            </div>
+            <div class="mb-6">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password"
+                       placeholder="••••••••••••" required>
+            </div>
+            <button type="submit" class="submit-btn">Sign In →</button>
+        </form>
+
+        <div class="divider"></div>
+
+        <p class="disclaimer">
+            Educational project only. Not financial advice.
+        </p>
+
+    </div>
+</body>
+</html>

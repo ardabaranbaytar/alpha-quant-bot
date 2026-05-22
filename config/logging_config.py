@@ -1,0 +1,22 @@
+# config/logging_config.py
+
+import logging
+import sys
+from config.settings import settings
+
+
+def setup_logging() -> None:
+    level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
+
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s | %(levelname)-8s | %(name)-30s | %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[logging.StreamHandler(sys.stdout)],
+        force=True,
+    )
+
+    # Silence noisy third-party libraries
+    for noisy in ("yfinance", "urllib3", "httpx", "httpcore",
+                  "apscheduler", "peewee", "charset_normalizer"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)

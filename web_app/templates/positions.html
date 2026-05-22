@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpha Quant | Trade Ledger</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+        :root {
+            --bg:        #f5f1eb;
+            --surface:   #ffffff;
+            --surface2:  #faf8f4;
+            --border:    rgba(0,0,0,0.08);
+            --text:      #1c1814;
+            --text-soft: #6b6256;
+            --text-mute: #a89e92;
+
+            --teal:      #2a8a7a;
+            --teal-bg:   rgba(42,138,122,0.1);
+            --teal-bdr:  rgba(42,138,122,0.25);
+
+            --rose:      #b05050;
+            --rose-bg:   rgba(176,80,80,0.1);
+            --rose-bdr:  rgba(176,80,80,0.25);
+
+            --amber:     #b87c20;
+            --amber-bg:  rgba(184,124,32,0.1);
+            --amber-bdr: rgba(184,124,32,0.25);
+
+            --steel:     #3a6fa8;
+            --steel-bg:  rgba(58,111,168,0.1);
+            --steel-bdr: rgba(58,111,168,0.25);
+
+            --violet:    #6a52a0;
+            --violet-bg: rgba(106,82,160,0.1);
+            --violet-bdr:rgba(106,82,160,0.25);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+
+        #webgl-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* NAV */
+        .nav-glass {
+            background: rgba(255, 252, 248, 0.88);
+            backdrop-filter: blur(24px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 24px rgba(0,0,0,0.05);
+        }
+
+        .logo-text {
+            background: linear-gradient(90deg, #2a8a7a, #6a52a0, #b05050, #2a8a7a);
+            background-size: 300% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 5s linear infinite;
+        }
+
+        @keyframes shimmer {
+            0%   { background-position: 0% center; }
+            100% { background-position: 300% center; }
+        }
+
+        .nav-link-active {
+            color: var(--teal);
+            font-weight: 700;
+            position: relative;
+        }
+
+        .nav-link-active::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--teal), transparent);
+        }
+
+        /* NAV STATUS */
+        .radar-status {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 9px 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+
+        .val-teal   { color: var(--teal);   font-weight: 800; }
+        .val-rose   { color: var(--rose);   font-weight: 800; }
+        .val-steel  { color: var(--steel);  font-weight: 800; }
+        .val-amber  { color: var(--amber);  font-weight: 800; }
+        .val-violet { color: var(--violet); font-weight: 800; }
+
+        /* PAGE TITLE */
+        .page-title { color: var(--text); letter-spacing: -0.03em; }
+
+        .section-label {
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--text-mute);
+        }
+
+        .soft-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+        }
+
+        /* SUMMARY CARDS */
+        .summary-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 20px 22px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                        box-shadow 0.35s ease;
+            transform-style: preserve-3d;
+            overflow: hidden;
+            position: relative;
+            cursor: default;
+        }
+
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--card-accent);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-8px) rotateX(4deg);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+        }
+
+        /* TABLE */
+        .ledger-table-wrap {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.06);
+        }
+
+        .table-header th {
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            color: var(--text-soft);
+            letter-spacing: 0.12em;
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 16px 18px;
+        }
+
+        .ledger-row {
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+            transition: background 0.15s ease;
+            position: relative;
+        }
+
+        .ledger-row::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            background: transparent;
+            transition: background 0.2s;
+        }
+
+        .ledger-row:hover { background: var(--surface2); }
+        .ledger-row:hover::before { background: linear-gradient(180deg, var(--teal), var(--violet)); }
+        .ledger-row td { padding: 13px 18px; vertical-align: middle; }
+
+        .pair-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--text);
+            font-size: 0.88rem;
+            transition: color 0.2s;
+        }
+
+        .ledger-row:hover .pair-name { color: var(--teal); }
+
+        /* BADGES */
+        .action-buy {
+            background: var(--teal-bg); color: var(--teal); border: 1px solid var(--teal-bdr);
+            padding: 3px 10px; border-radius: 7px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 700;
+            letter-spacing: 0.05em; display: inline-block;
+        }
+
+        .action-sell {
+            background: var(--rose-bg); color: var(--rose); border: 1px solid var(--rose-bdr);
+            padding: 3px 10px; border-radius: 7px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 700;
+            letter-spacing: 0.05em; display: inline-block;
+        }
+
+        @keyframes pulse-amber {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.6; }
+        }
+
+        .status-open {
+            background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-bdr);
+            padding: 3px 10px; border-radius: 7px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 700;
+            letter-spacing: 0.08em; display: inline-block;
+            animation: pulse-amber 2.5s ease-in-out infinite;
+        }
+
+        .status-closed {
+            background: rgba(0,0,0,0.04); color: var(--text-mute);
+            border: 1px solid var(--border);
+            padding: 3px 10px; border-radius: 7px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 700;
+            letter-spacing: 0.08em; display: inline-block;
+        }
+
+        .pnl-positive { color: var(--teal);  font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+        .pnl-negative { color: var(--rose);  font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+        .pnl-zero     { color: var(--text-mute); font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+
+        @keyframes pulse-inflight {
+            0%, 100% { opacity: 0.8; }
+            50%       { opacity: 1; }
+        }
+
+        .inflight-badge {
+            background: var(--steel-bg); color: var(--steel); border: 1px solid var(--steel-bdr);
+            padding: 3px 10px; border-radius: 7px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+            letter-spacing: 0.1em; display: inline-block;
+            animation: pulse-inflight 2.5s ease-in-out infinite;
+        }
+
+        .mono-sm { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-soft); }
+        .mono-xs { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;  color: var(--text-mute); }
+
+        /* DISCLAIMER */
+        .disclaimer-banner {
+            background: var(--amber-bg);
+            border: 1px solid var(--amber-bdr);
+            border-radius: 12px;
+            padding: 12px 18px;
+            font-size: 0.78rem;
+            color: var(--amber);
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--text-mute); border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <canvas id="webgl-canvas" aria-hidden="true"></canvas>
+
+    <!-- NAVBAR -->
+    <nav class="nav-glass px-8 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center space-x-8">
+            <span class="text-xl font-black tracking-tight logo-text">⬡ ALPHA QUANT</span>
+            <div class="flex space-x-6 text-xs font-semibold uppercase tracking-widest">
+                <a href="/" class="transition-all duration-200 hover:text-slate-600" style="color:var(--text-mute);">Signal Radar</a>
+                <a href="/positions" class="nav-link-active pb-1 transition-all">Trade Ledger</a>
+            </div>
+        </div>
+        <div class="radar-status flex items-center space-x-2">
+            <span style="color:var(--text-mute); font-size:0.7rem; font-family:'JetBrains Mono',monospace; letter-spacing:0.1em;">NET RETURN:</span>
+            {% if toplam_pnl >= 0 %}
+                <span class="val-teal text-lg" style="font-family:'JetBrains Mono',monospace;">+${{ "{:,.2f}".format(toplam_pnl) }}</span>
+            {% else %}
+                <span class="val-rose text-lg" style="font-family:'JetBrains Mono',monospace;">${{ "{:,.2f}".format(toplam_pnl) }}</span>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="p-8 max-w-7xl mx-auto">
+
+        <!-- DISCLAIMER -->
+        <div class="disclaimer-banner mb-8 flex items-start gap-3">
+            <span class="text-lg flex-shrink-0">⚠️</span>
+            <span><strong>Educational Project Only.</strong> This tool is developed for learning purposes and does not constitute financial or investment advice. All signals are experimental. Do not make real investment decisions based on this output.</span>
+        </div>
+
+        <!-- HEADER -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-black tracking-tight page-title">Trade Ledger</h1>
+            <p class="text-sm mt-1" style="color:var(--text-soft);">All positions recorded by the scanner, open and closed.</p>
+        </div>
+
+        <!-- SUMMARY CARDS -->
+        {% if islemler %}
+        {% set kapali = islemler | selectattr('durum', 'equalto', 'KAPALI') | list %}
+        {% set acik   = islemler | selectattr('durum', 'equalto', 'ACIK')   | list %}
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+
+            <div class="summary-card" style="--card-accent: linear-gradient(90deg, var(--steel), #5590cc);">
+                <div class="section-label mb-3">Total Trades</div>
+                <div class="text-4xl val-steel" style="font-family:'JetBrains Mono',monospace;">{{ islemler | length }}</div>
+                <div class="soft-divider mt-3 mb-2"></div>
+                <div class="text-xs mono-xs">All positions</div>
+            </div>
+
+            <div class="summary-card" style="--card-accent: linear-gradient(90deg, var(--amber), #d4952a);">
+                <div class="section-label mb-3">Open Positions</div>
+                <div class="text-4xl val-amber" style="font-family:'JetBrains Mono',monospace;">{{ acik | length }}</div>
+                <div class="soft-divider mt-3 mb-2"></div>
+                <div class="text-xs mono-xs">Currently active</div>
+            </div>
+
+            <div class="summary-card" style="--card-accent: linear-gradient(90deg, var(--teal), #3db89f);">
+                <div class="section-label mb-3">Closed Trades</div>
+                <div class="text-4xl val-teal" style="font-family:'JetBrains Mono',monospace;">{{ kapali | length }}</div>
+                <div class="soft-divider mt-3 mb-2"></div>
+                <div class="text-xs mono-xs">Completed positions</div>
+            </div>
+
+            <div class="summary-card" style="--card-accent: linear-gradient(90deg, var(--violet), #8a68cc);">
+                <div class="section-label mb-3">Cumulative PnL</div>
+                <div class="text-3xl {% if toplam_pnl >= 0 %}val-teal{% else %}val-rose{% endif %}" style="font-family:'JetBrains Mono',monospace;">
+                    {% if toplam_pnl >= 0 %}+{% endif %}${{ "{:,.0f}".format(toplam_pnl) }}
+                </div>
+                <div class="soft-divider mt-3 mb-2"></div>
+                <div class="text-xs mono-xs">Net cumulative</div>
+            </div>
+
+        </div>
+        {% endif %}
+
+        <!-- LEDGER TABLE -->
+        <div class="ledger-table-wrap">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="table-header">
+                        <th>Pair</th>
+                        <th>Direction</th>
+                        <th>Entry Time</th>
+                        <th>Entry Z-Score</th>
+                        <th>Entry (A / B)</th>
+                        <th>Exit (A / B)</th>
+                        <th>Status</th>
+                        <th class="text-right">Net PnL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if islemler %}
+                        {% for i in islemler %}
+                        <tr class="ledger-row">
+
+                            <td><span class="pair-name">{{ i.parite }}</span></td>
+
+                            <td>
+                                {% if i.aksiyon and 'BUY' in i.aksiyon %}
+                                    <span class="action-buy">{{ i.aksiyon }}</span>
+                                {% else %}
+                                    <span class="action-sell">{{ i.aksiyon }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if i.giris_tarihi %}
+                                    <span class="mono-xs">{{ i.giris_tarihi.strftime('%Y-%m-%d') }}</span><br>
+                                    <span class="mono-sm" style="color:var(--teal); opacity:0.7;">{{ i.giris_tarihi.strftime('%H:%M:%S') }}</span>
+                                {% else %}
+                                    <span class="mono-xs">--:--</span>
+                                {% endif %}
+                            </td>
+
+                            <td><span class="mono-sm">{{ i.giris_z_score }}</span></td>
+
+                            <td>
+                                <span class="mono-sm">${{ i.fiyat_A_giris }}</span>
+                                <span style="color:var(--text-mute); margin:0 4px;">/</span>
+                                <span class="mono-sm">${{ i.fiyat_B_giris }}</span>
+                            </td>
+
+                            <td>
+                                {% if i.fiyat_A_cikis %}
+                                    <span class="mono-sm">${{ i.fiyat_A_cikis }}</span>
+                                    <span style="color:var(--text-mute); margin:0 4px;">/</span>
+                                    <span class="mono-sm">${{ i.fiyat_B_cikis }}</span>
+                                {% else %}
+                                    <span class="mono-xs">-- / --</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if i.durum == 'ACIK' %}
+                                    <span class="status-open">OPEN</span>
+                                {% else %}
+                                    <span class="status-closed">CLOSED</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-right">
+                                {% if i.pnl is not none %}
+                                    {% if i.pnl > 0 %}
+                                        <span class="pnl-positive text-base">+${{ i.pnl }}</span>
+                                    {% elif i.pnl < 0 %}
+                                        <span class="pnl-negative text-base">${{ i.pnl }}</span>
+                                    {% else %}
+                                        <span class="pnl-zero text-base">$0.00</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="inflight-badge">IN FLIGHT</span>
+                                {% endif %}
+                            </td>
+
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="py-16 text-center">
+                                <div class="text-3xl mb-3 opacity-20">◈</div>
+                                <div class="text-xs uppercase tracking-widest font-semibold mb-1" style="color:var(--text-mute);">Ledger empty</div>
+                                <div class="text-xs" style="color:var(--text-mute);">No recorded positions yet</div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="px-8 py-6 mt-8 max-w-7xl mx-auto">
+        <div class="soft-divider mb-4"></div>
+        <p class="text-xs text-center" style="color:var(--text-mute); font-family:'JetBrains Mono',monospace;">
+            Alpha Quant is an educational learning project. Not financial advice. Past results do not guarantee future performance.
+        </p>
+    </footer>
+
+    <script>
+        // ─── WEBGL SHADER — subtle warm watercolor ──────────────────────────────
+        const canvas = document.getElementById('webgl-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const mouse = new THREE.Vector2(0.5, 0.5);
+        const targetMouse = new THREE.Vector2(0.5, 0.5);
+
+        const vert = `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position, 1.0); }`;
+
+        const frag = `
+            precision highp float;
+            uniform vec2 uRes; uniform vec2 uMouse; uniform float uTime;
+            varying vec2 vUv;
+
+            float hash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+            float noise(vec2 p) {
+                vec2 i = floor(p); vec2 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                return mix(mix(hash2(i), hash2(i+vec2(1,0)), f.x),
+                           mix(hash2(i+vec2(0,1)), hash2(i+vec2(1,1)), f.x), f.y);
+            }
+
+            float fbm(vec2 p) {
+                float v = 0.0; float a = 0.5;
+                for(int i = 0; i < 4; i++) { v += a * noise(p); p = p*2.1+vec2(1.7,9.2); a *= 0.5; }
+                return v;
+            }
+
+            void main() {
+                vec2 st = gl_FragCoord.xy / uRes.xy;
+
+                vec3 col = vec3(0.961, 0.945, 0.922);
+
+                float n1 = fbm(st * 2.2 + uTime * 0.018);
+                float n2 = fbm(st * 3.0 - uTime * 0.013 + vec2(4.1, 2.3));
+                float n3 = fbm(st * 1.8 + uTime * 0.01  + vec2(8.5, 1.1));
+
+                // Soft violet wash bottom-left
+                col -= vec3(0.02, 0.02, 0.0) * smoothstep(0.42, 0.68, n1)
+                                             * smoothstep(0.65, 0.0, length(st - vec2(0.12, 0.82)));
+
+                // Soft teal wash top-right
+                col -= vec3(0.0, 0.04, 0.03) * smoothstep(0.40, 0.66, n2)
+                                             * smoothstep(0.7, 0.0, length(st - vec2(0.88, 0.2)));
+
+                // Soft amber wash mid
+                col -= vec3(0.0, 0.025, 0.04) * smoothstep(0.38, 0.64, n3)
+                                              * smoothstep(0.6, 0.0, length(st - vec2(0.5, 0.6)));
+
+                float d = distance(st, uMouse);
+                col += vec3(0.02, 0.015, 0.005) * smoothstep(0.28, 0.0, d);
+
+                col = clamp(col, 0.88, 1.0);
+                gl_FragColor = vec4(col, 1.0);
+            }
+        `;
+
+        const mat = new THREE.ShaderMaterial({
+            vertexShader: vert, fragmentShader: frag,
+            uniforms: {
+                uRes:   { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                uMouse: { value: mouse },
+                uTime:  { value: 0 }
+            }
+        });
+
+        scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat));
+
+        window.addEventListener('mousemove', (e) => {
+            targetMouse.x = e.clientX / window.innerWidth;
+            targetMouse.y = 1.0 - (e.clientY / window.innerHeight);
+        });
+
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            mat.uniforms.uRes.value.set(window.innerWidth, window.innerHeight);
+        });
+
+        // 3D TILT for summary cards
+        document.querySelectorAll('.summary-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const r = card.getBoundingClientRect();
+                const x = (e.clientX - r.left) / r.width  - 0.5;
+                const y = (e.clientY - r.top)  / r.height - 0.5;
+                card.style.transform = `translateY(-8px) rotateX(${-y * 8}deg) rotateY(${x * 8}deg)`;
+            });
+            card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+        });
+
+        const clock = new THREE.Clock();
+        (function animate() {
+            requestAnimationFrame(animate);
+            mouse.x += (targetMouse.x - mouse.x) * 0.05;
+            mouse.y += (targetMouse.y - mouse.y) * 0.05;
+            mat.uniforms.uTime.value  = clock.getElapsedTime();
+            mat.uniforms.uMouse.value.copy(mouse);
+            renderer.render(scene, camera);
+        })();
+
+        setTimeout(() => window.location.reload(), 30000);
+    </script>
+</body>
+</html>
