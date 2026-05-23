@@ -1,5 +1,3 @@
-# core/analytics.py
-
 import logging
 import pandas as pd
 import numpy as np
@@ -12,30 +10,29 @@ class PerformanceAnalytics:
     def __init__(self):
         pass
 
-    def _get_kapali_pozisyonlar(self) -> pd.DataFrame:
-        """Veritabanından kapanmış tüm pozisyonları kronolojik sıra ile DataFrame'e çeker."""
-        # 💡 DÜZELTME: net_pnl yerine senin şemandaki orijinal 'pnl' kolonu çağrıldı
+    def _get_closed_positions(self) -> pd.DataFrame:
+        """Fetches all closed positions from the database into a DataFrame in chronological order."""
         query = """
-            SELECT parite, durum, pnl, giris_tarihi, cikis_tarihi 
-            FROM pozisyonlar 
-            WHERE durum = 'KAPALI' 
-            ORDER BY cikis_tarihi ASC;
+            SELECT pair, status, pnl, entry_time, exit_time 
+            FROM positions 
+            WHERE status = 'CLOSED' 
+            ORDER BY exit_time ASC;
         """
         try:
             with db.engine.connect() as conn:
                 df = pd.read_sql(text(query), conn)
             
             if not df.empty:
-                df['giris_tarihi'] = pd.to_datetime(df['giris_tarihi'])
-                df['cikis_tarihi'] = pd.to_datetime(df['cikis_tarihi'])
+                df['entry_time'] = pd.to_datetime(df['entry_time'])
+                df['exit_time'] = pd.to_datetime(df['exit_time'])
             return df
         except Exception as e:
             logger.error("Failed to read position history: %s", e)
             return pd.DataFrame()
 
-    def rapor_uret(self, csv_kaydet: bool = True) -> dict:
-        """Tüm quant metriklerini hesaplar ve özet bir rapor sözlüğü döner."""
-        df = self._get_kapali_pozisyonlar()
+    def generate_report(self, save_csv: bool = True) -> dict:
+        """Calculates all quant metrics and returns a summary report dictionary."""
+        df = self._get_closed_positions()
         
         if df.empty:
             logger.info("No closed positions found. Returning empty report.")
@@ -46,60 +43,57 @@ class PerformanceAnalytics:
                 "Max Drawdown": "$0.00"
             }
 
-        # --- Temel Metrikler ---
-        toplam_islem = len(df)
-        toplam_net_pnl = df['pnl'].sum()  # 💡 DÜZELTME: 'pnl' olarak güncellendi
+        total_trades = len(df)
+        total_net_pnl = df['pnl'].sum()  
         
-        kazananlar = df[df['pnl'] > 0]
-        kaybedenler = df[df['pnl'] <= 0]
+        winners = df[df['pnl'] > 0]
+        losers = df[df['pnl'] <= 0]
         
-        kazanan_sayisi = len(kazananlar)
-        win_rate = (kazanan_sayisi / toplam_islem) * 100 if toplam_islem > 0 else 0
+        winner_count = len(winners)
+        win_rate = (winner_count / total_trades) * 100 if total_trades > 0 else 0
         
-        avg_win = kazananlar['pnl'].mean() if not kazananlar.empty else 0.0
-        avg_loss = kaybedenler['pnl'].mean() if not kaybedenler.empty else 0.0
+        avg_win = winners['pnl'].mean() if not winners.empty else 0.0
+        avg_loss = losers['pnl'].mean() if not losers.empty else 0.0
         
-        toplam_kazanc = kazananlar['pnl'].sum()
-        toplam_zarar = abs(kaybedenler['pnl'].sum())
-        profit_factor = toplam_kazanc / toplam_zarar if toplam_zarar > 0 else toplam_kazanc
+        total_profit = winners['pnl'].sum()
+        total_loss = abs(losers['pnl'].sum())
+        profit_factor = total_profit / total_loss if total_loss > 0 else total_profit
 
-        # --- Gelişmiş Metrikler ---
-        df['holding_time'] = df['cikis_tarihi'] - df['giris_tarihi']
+        df['holding_time'] = df['exit_time'] - df['entry_time']
         avg_holding_time = df['holding_time'].mean()
         
-        parite_gruplari = df.groupby('parite')['pnl'].sum()
-        en_iyi_parite = parite_gruplari.idxmax() if not parite_gruplari.empty else "N/A"
-        en_kotu_parite = parite_gruplari.idxmin() if not parite_gruplari.empty else "N/A"
+        pair_groups = df.groupby('pair')['pnl'].sum()
+        best_pair = pair_groups.idxmax() if not pair_groups.empty else "N/A"
+        worst_pair = pair_groups.idxmin() if not pair_groups.empty else "N/A"
 
-        # 📉 Maksimum Düşüş (Max Drawdown) Hesaplama
-        bakiye_egrisi = 100000 + df['pnl'].cumsum()
-        kumulatif_zirve = bakiye_egrisi.cummax()
-        dususler = bakiye_egrisi - kumulatif_zirve
-        max_drawdown = dususler.min() if not dususler.empty else 0.0
+        equity_curve = 100000 + df['pnl'].cumsum()
+        cumulative_peak = equity_curve.cummax()
+        drawdowns = equity_curve - cumulative_peak
+        max_drawdown = drawdowns.min() if not drawdowns.empty else 0.0
 
-        rapor = {
-            "Durum": "OPERATIONAL",
-            "Total PnL": f"${toplam_net_pnl:,.2f}",
+        report = {
+            "Status": "OPERATIONAL",
+            "Total PnL": f"${total_net_pnl:,.2f}",
             "Win Rate": f"%{win_rate:.2f}",
             "Profit Factor": f"{profit_factor:.2f}",
             "Max Drawdown": f"${max_drawdown:,.2f}",
             "Average Win": f"${avg_win:,.2f}",
             "Average Loss": f"${avg_loss:,.2f}",
-            "Number of Trades": toplam_islem,
+            "Number of Trades": total_trades,
             "Avg Holding Time": str(avg_holding_time).split('.')[0],
-            "Best Pair": en_iyi_parite,
-            "Worst Pair": en_kotu_parite,
+            "Best Pair": best_pair,
+            "Worst Pair": worst_pair,
             "Timestamp": pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
         }
 
-        if csv_kaydet:
+        if save_csv:
             try:
-                rapor_df = pd.DataFrame(list(rapor.items()), columns=['Metrik', 'Değer'])
-                rapor_df.to_csv("logs/performance_report.csv", index=False, encoding='utf-8')
+                report_df = pd.DataFrame(list(report.items()), columns=['Metric', 'Value'])
+                report_df.to_csv("logs/performance_report.csv", index=False, encoding='utf-8')
                 logger.info("Performance report saved to logs/performance_report.csv")
             except Exception as e:
                 logger.warning("Could not save CSV report: %s", e)
 
-        return rapor
+        return report
 
 analytics_manager = PerformanceAnalytics()

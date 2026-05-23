@@ -296,7 +296,7 @@
         <div class="radar-status flex items-center space-x-2">
             <div class="status-dot"></div>
             <span style="color:var(--text-mute); font-size:0.7rem; font-family:'JetBrains Mono',monospace; letter-spacing:0.1em;">ACTIVE SIGNALS:</span>
-            <span class="val-teal text-xl font-black" style="font-family:'JetBrains Mono',monospace;">{{ toplam_firsat }}</span>
+            <span class="val-teal text-xl font-black" style="font-family:'JetBrains Mono',monospace;">{{ total_opportunities }}</span>
         </div>
     </nav>
 
@@ -381,21 +381,21 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% if firsatlar %}
-                        {% for f in firsatlar %}
+                    {% if opportunities %}
+                        {% for f in opportunities %}
                         <tr class="signal-row">
-                            <td><span class="pair-name">{{ f.parite }}</span></td>
+                            <td><span class="pair-name">{{ f.pair }}</span></td>
                             <td>
                                 <span class="zscore-badge {% if f.z_score > 0 %}zscore-pos{% else %}zscore-neg{% endif %}">
                                     {{ f.z_score }}
                                 </span>
                             </td>
-                            <td><span class="price-val">${{ "{:,.2f}".format(f.fiyat_A|float) if f.fiyat_A else '0.00' }}</span></td>
-                            <td><span class="price-val">${{ "{:,.2f}".format(f.fiyat_B|float) if f.fiyat_B else '0.00' }}</span></td>
+                            <td><span class="price-val">${{ "{:,.2f}".format(f.price_A|float) if f.price_A else '0.00' }}</span></td>
+                            <td><span class="price-val">${{ "{:,.2f}".format(f.price_B|float) if f.price_B else '0.00' }}</span></td>
                             <td><span class="pvalue-val">{{ f.p_value }}</span></td>
                             <td class="text-right">
-                                <span class="{% if 'BUY' in f.aksiyon and 'SELL' in f.aksiyon and f.aksiyon.startswith('BUY') %}action-buy{% else %}action-sell{% endif %}">
-                                    {{ f.aksiyon }}
+                                <span class="{% if 'BUY' in f.action and 'SELL' in f.action and f.action.startswith('BUY') %}action-buy{% else %}action-sell{% endif %}">
+                                    {{ f.action }}
                                 </span>
                             </td>
                         </tr>

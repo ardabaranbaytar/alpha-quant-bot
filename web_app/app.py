@@ -1,5 +1,3 @@
-# web_app/app.py
-
 import secrets
 import os
 import datetime
@@ -26,7 +24,7 @@ from core.analytics import analytics_manager
 
 logger    = logging.getLogger(__name__)
 _COOKIE   = "aq_session"
-_MAX_AGE  = 8 * 3600  # 8 hours
+_MAX_AGE  = 8 * 3600  
 
 # ── Session helpers ───────────────────────────────────────────────────────────
 def _serializer() -> URLSafeTimedSerializer:
@@ -104,7 +102,7 @@ def _background_worker():
     logger.info("Background worker started.")
     while True:
         try:
-            execution_engine.emir_ve_pozisyon_yonet()
+            execution_engine.manage_orders_and_positions()
         except Exception as e:
             logger.error("Worker error: %s", e)
         time.sleep(60)
@@ -161,18 +159,18 @@ def logout():
 @limiter.limit("20/minute")
 def dashboard(request: Request):
     try:
-        firsatlar = signals_hub.anlik_firsatlari_tara()
-        metrikler = analytics_manager.rapor_uret(csv_kaydet=False)
+        opportunities = signals_hub.scan_instant_opportunities()
+        metrics = analytics_manager.generate_report(save_csv=False)
     except Exception as e:
         logger.error("Dashboard data fetch failed: %s", e)
-        firsatlar = []
-        metrikler = {"Total PnL": "$0.00", "Win Rate": "0.00%",
+        opportunities = []
+        metrics = {"Total PnL": "$0.00", "Win Rate": "0.00%",
                      "Profit Factor": "0.00", "Max Drawdown": "$0.00"}
 
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
-        context={"firsatlar": firsatlar, "toplam_firsat": len(firsatlar), "metrics": metrikler},
+        context={"opportunities": opportunities, "total_opportunities": len(opportunities), "metrics": metrics},
     )
 
 
@@ -180,21 +178,21 @@ def dashboard(request: Request):
 @app.get("/positions", response_class=HTMLResponse)
 @limiter.limit("20/minute")
 def positions(request: Request):
-    islemler   = []
-    toplam_pnl = 0.0
+    trades     = []
+    total_pnl  = 0.0
     try:
         with db.engine.connect() as conn:
-            islemler = conn.execute(
-                text("SELECT * FROM pozisyonlar ORDER BY giris_tarihi DESC;")
+            trades = conn.execute(
+                text("SELECT * FROM positions ORDER BY entry_time DESC;")
             ).mappings().fetchall()
-        toplam_pnl = sum(float(r["pnl"]) for r in islemler if r["pnl"] is not None)
+        total_pnl = sum(float(r["pnl"]) for r in trades if r["pnl"] is not None)
     except Exception as e:
         logger.error("Positions query failed: %s", e)
 
     return templates.TemplateResponse(
         request=request,
         name="positions.html",
-        context={"islemler": islemler, "toplam_pnl": round(toplam_pnl, 2)},
+        context={"trades": trades, "total_pnl": round(total_pnl, 2)},
     )
 
 
@@ -219,4 +217,4 @@ async def health(request: Request):
 @app.get("/api/signals")
 @limiter.limit("10/minute")
 async def api_signals(request: Request):
-    return signals_hub.anlik_firsatlari_tara()
+    return signals_hub.scan_instant_opportunities()

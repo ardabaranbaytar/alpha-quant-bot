@@ -1,5 +1,3 @@
-# config/logging_config.py
-
 import logging
 import sys
 from config.settings import settings
@@ -16,7 +14,6 @@ def setup_logging() -> None:
         force=True,
     )
 
-    # Silence noisy third-party libraries
     for noisy in ("yfinance", "urllib3", "httpx", "httpcore",
                   "apscheduler", "peewee", "charset_normalizer"):
         logging.getLogger(noisy).setLevel(logging.WARNING)

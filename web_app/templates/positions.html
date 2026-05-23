@@ -290,10 +290,10 @@
         </div>
         <div class="radar-status flex items-center space-x-2">
             <span style="color:var(--text-mute); font-size:0.7rem; font-family:'JetBrains Mono',monospace; letter-spacing:0.1em;">NET RETURN:</span>
-            {% if toplam_pnl >= 0 %}
-                <span class="val-teal text-lg" style="font-family:'JetBrains Mono',monospace;">+${{ "{:,.2f}".format(toplam_pnl) }}</span>
+            {% if total_pnl >= 0 %}
+                <span class="val-teal text-lg" style="font-family:'JetBrains Mono',monospace;">+${{ "{:,.2f}".format(total_pnl) }}</span>
             {% else %}
-                <span class="val-rose text-lg" style="font-family:'JetBrains Mono',monospace;">${{ "{:,.2f}".format(toplam_pnl) }}</span>
+                <span class="val-rose text-lg" style="font-family:'JetBrains Mono',monospace;">${{ "{:,.2f}".format(total_pnl) }}</span>
             {% endif %}
         </div>
     </nav>
@@ -314,36 +314,36 @@
         </div>
 
         <!-- SUMMARY CARDS -->
-        {% if islemler %}
-        {% set kapali = islemler | selectattr('durum', 'equalto', 'KAPALI') | list %}
-        {% set acik   = islemler | selectattr('durum', 'equalto', 'ACIK')   | list %}
+        {% if trades %}
+        {% set closed_trades = trades | selectattr('status', 'equalto', 'CLOSED') | list %}
+        {% set open_trades   = trades | selectattr('status', 'equalto', 'OPEN')   | list %}
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
 
             <div class="summary-card" style="--card-accent: linear-gradient(90deg, var(--steel), #5590cc);">
                 <div class="section-label mb-3">Total Trades</div>
-                <div class="text-4xl val-steel" style="font-family:'JetBrains Mono',monospace;">{{ islemler | length }}</div>
+                <div class="text-4xl val-steel" style="font-family:'JetBrains Mono',monospace;">{{ trades | length }}</div>
                 <div class="soft-divider mt-3 mb-2"></div>
                 <div class="text-xs mono-xs">All positions</div>
             </div>
 
             <div class="summary-card" style="--card-accent: linear-gradient(90deg, var(--amber), #d4952a);">
                 <div class="section-label mb-3">Open Positions</div>
-                <div class="text-4xl val-amber" style="font-family:'JetBrains Mono',monospace;">{{ acik | length }}</div>
+                <div class="text-4xl val-amber" style="font-family:'JetBrains Mono',monospace;">{{ open_trades | length }}</div>
                 <div class="soft-divider mt-3 mb-2"></div>
                 <div class="text-xs mono-xs">Currently active</div>
             </div>
 
             <div class="summary-card" style="--card-accent: linear-gradient(90deg, var(--teal), #3db89f);">
                 <div class="section-label mb-3">Closed Trades</div>
-                <div class="text-4xl val-teal" style="font-family:'JetBrains Mono',monospace;">{{ kapali | length }}</div>
+                <div class="text-4xl val-teal" style="font-family:'JetBrains Mono',monospace;">{{ closed_trades | length }}</div>
                 <div class="soft-divider mt-3 mb-2"></div>
                 <div class="text-xs mono-xs">Completed positions</div>
             </div>
 
             <div class="summary-card" style="--card-accent: linear-gradient(90deg, var(--violet), #8a68cc);">
                 <div class="section-label mb-3">Cumulative PnL</div>
-                <div class="text-3xl {% if toplam_pnl >= 0 %}val-teal{% else %}val-rose{% endif %}" style="font-family:'JetBrains Mono',monospace;">
-                    {% if toplam_pnl >= 0 %}+{% endif %}${{ "{:,.0f}".format(toplam_pnl) }}
+                <div class="text-3xl {% if total_pnl >= 0 %}val-teal{% else %}val-rose{% endif %}" style="font-family:'JetBrains Mono',monospace;">
+                    {% if total_pnl >= 0 %}+{% endif %}${{ "{:,.0f}".format(total_pnl) }}
                 </div>
                 <div class="soft-divider mt-3 mb-2"></div>
                 <div class="text-xs mono-xs">Net cumulative</div>
@@ -368,49 +368,49 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% if islemler %}
-                        {% for i in islemler %}
+                    {% if trades %}
+                        {% for i in trades %}
                         <tr class="ledger-row">
 
-                            <td><span class="pair-name">{{ i.parite }}</span></td>
+                            <td><span class="pair-name">{{ i.pair }}</span></td>
 
                             <td>
-                                {% if i.aksiyon and 'BUY' in i.aksiyon %}
-                                    <span class="action-buy">{{ i.aksiyon }}</span>
+                                {% if i.action and 'BUY' in i.action %}
+                                    <span class="action-buy">{{ i.action }}</span>
                                 {% else %}
-                                    <span class="action-sell">{{ i.aksiyon }}</span>
+                                    <span class="action-sell">{{ i.action }}</span>
                                 {% endif %}
                             </td>
 
                             <td>
-                                {% if i.giris_tarihi %}
-                                    <span class="mono-xs">{{ i.giris_tarihi.strftime('%Y-%m-%d') }}</span><br>
-                                    <span class="mono-sm" style="color:var(--teal); opacity:0.7;">{{ i.giris_tarihi.strftime('%H:%M:%S') }}</span>
+                                {% if i.entry_time %}
+                                    <span class="mono-xs">{{ i.entry_time.strftime('%Y-%m-%d') }}</span><br>
+                                    <span class="mono-sm" style="color:var(--teal); opacity:0.7;">{{ i.entry_time.strftime('%H:%M:%S') }}</span>
                                 {% else %}
                                     <span class="mono-xs">--:--</span>
                                 {% endif %}
                             </td>
 
-                            <td><span class="mono-sm">{{ i.giris_z_score }}</span></td>
+                            <td><span class="mono-sm">{{ i.entry_z_score }}</span></td>
 
                             <td>
-                                <span class="mono-sm">${{ i.fiyat_A_giris }}</span>
+                                <span class="mono-sm">${{ i.price_a_entry }}</span>
                                 <span style="color:var(--text-mute); margin:0 4px;">/</span>
-                                <span class="mono-sm">${{ i.fiyat_B_giris }}</span>
+                                <span class="mono-sm">${{ i.price_b_entry }}</span>
                             </td>
 
                             <td>
-                                {% if i.fiyat_A_cikis %}
-                                    <span class="mono-sm">${{ i.fiyat_A_cikis }}</span>
+                                {% if i.price_a_exit %}
+                                    <span class="mono-sm">${{ i.price_a_exit }}</span>
                                     <span style="color:var(--text-mute); margin:0 4px;">/</span>
-                                    <span class="mono-sm">${{ i.fiyat_B_cikis }}</span>
+                                    <span class="mono-sm">${{ i.price_b_exit }}</span>
                                 {% else %}
                                     <span class="mono-xs">-- / --</span>
                                 {% endif %}
                             </td>
 
                             <td>
-                                {% if i.durum == 'ACIK' %}
+                                {% if i.status == 'OPEN' %}
                                     <span class="status-open">OPEN</span>
                                 {% else %}
                                     <span class="status-closed">CLOSED</span>
